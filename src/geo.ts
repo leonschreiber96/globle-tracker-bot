@@ -1,6 +1,8 @@
 // const germany = require('../avgSubSections.json');
 // const rawGermany = require("../germany.json")
 
+export type Country = { name: string, isoCode: string; };
+
 interface Point {
   x: number;
   y: number;

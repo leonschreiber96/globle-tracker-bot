@@ -1,5 +1,8 @@
 import puppeteer from 'puppeteer';
 import countries from "../data/countries.json" with { type: "json"};
+import CountryInfo from './countryInfo.js';
+import { GameType, SolvingStrategy } from './solving.js';
+import { Country } from './geo.js';
 
 const invalidCountries = [
   "Senkakus",
@@ -29,16 +32,21 @@ const wronglyNamedCountriesMapping = {
   "Gambia, The": "Gambia",
   "Sao Tome & Principe": "São Tomé and Príncipe",
 };
-type GameType = 'globle' | 'globleCapitals';
 
 export default class GameSolver {
   private browser?: puppeteer.Browser;
   private page?: puppeteer.Page;
-  private guesses: { country: string, closestBorder: number; }[] = [];
   private globleUrls: Record<GameType, string> = {
     globle: "https://globle-game.com/game",
     globleCapitals: "https://globle-capitals.com/game/",
   };
+
+  private guesses: { country: string, closestBorder: number; }[] = [];
+  private countries: Country[];
+
+  constructor(geoData: CountryInfo[]) {
+    this.countries = geoData.map(({ properties }) => ({ name: properties.shapeName, isoCode: properties.shapeGroup }));
+  }
 
   async launchBrowser(game: GameType, headless = true) {
     this.browser = await puppeteer.launch({ headless: headless });
@@ -50,7 +58,7 @@ export default class GameSolver {
     await this.browser?.close();
   }
 
-  async solve() {
+  async solve(strategy: SolvingStrategy) {
     if (!this.browser || !this.page) {
       console.error('Browser or page not initialized');
       return;
