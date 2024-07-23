@@ -50,7 +50,7 @@ async function saveGame(newGame, auth) {
 
 let saveLock = false;
 
-auth.authorize().then((token) => {
+auth.authorize().then((token) => {  
   bot.on('message', async (message) => {
     const matchesRegex = message.text.match(msgRegex);
     if (!matchesRegex) {
