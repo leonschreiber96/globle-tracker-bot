@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",                   // Allows use of ESNext features, including top-level await
+    "module": "NodeNext",                 // Use NodeNext to support ES modules
+    "moduleResolution": "NodeNext",       // Ensure module resolution is compatible with ES modules
+    "outDir": "dist",                     // Output directory for compiled JavaScript files
+    "esModuleInterop": true,              // Enables compatibility with CommonJS modules
+    "strict": true,                       // Enable all strict type-checking options
+    "skipLibCheck": true,                 // Skip type checking of declaration files
+    "useUnknownInCatchVariables": true,   // Use unknown type for catch variables
+    "experimentalDecorators": true,       // Enable experimental decorators
+    "emitDecoratorMetadata": true,        // Emit metadata for decorators
+    "sourceMap": true,                    // Generate source maps for debugging
+    "resolveJsonModule": true,            // Enable importing JSON files
+  },
+  "ts-node": {
+    "esm": true                            // Enables ESM support in ts-node
+  },
+  "exclude": ["node_modules"]
+}

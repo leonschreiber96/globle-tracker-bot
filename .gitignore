@@ -145,3 +145,5 @@ dist
 .env
 credentials.json
 token.json
+appconfig.ts
+data/

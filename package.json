@@ -4,5 +4,14 @@
     "googleapis": "^105.0.0",
     "node-telegram-bot-api": "^0.66.0",
     "puppeteer": "^22.13.1"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "npx tsc-watch --onSuccess \"node dist/main.js\"",
+    "start": "node dist/main.js"
+  },
+  "devDependencies": {
+    "@types/node-telegram-bot-api": "^0.64.7"
   }
 }
