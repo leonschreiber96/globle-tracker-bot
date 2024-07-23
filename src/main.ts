@@ -1,4 +1,5 @@
 import GlobleBot from "./bot.js";
+import GameSolver from "./gameSolver.js";
 import CONFIG from "./appConfig.js";
 
 if (!CONFIG.TELEGRAM_BOT_TOKEN || !CONFIG.SHEET_ID || !CONFIG.ADMIN_CHAT_ID) {
@@ -9,3 +10,7 @@ if (!CONFIG.TELEGRAM_BOT_TOKEN || !CONFIG.SHEET_ID || !CONFIG.ADMIN_CHAT_ID) {
 // const bot = new GlobleBot(CONFIG.TELEGRAM_BOT_TOKEN, CONFIG.ADMIN_CHAT_ID);
 // bot.start();
 
+const solver = new GameSolver();
+// await solver.launchBrowser("globle", false);
+// await solver.solve();
+// await solver.closeBrowser();

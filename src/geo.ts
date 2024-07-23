@@ -1,19 +1,30 @@
-const germany = require('../avgSubSections.json');
-const rawGermany = require("../germany.json")
+// const germany = require('../avgSubSections.json');
+// const rawGermany = require("../germany.json")
+
+interface Point {
+  x: number;
+  y: number;
+}
+
+interface Circle {
+  center: Point;
+  radius: number;
+}
+
 // Function to calculate the distance between two points
-function distance(p1, p2) {
+function distance(p1: Point, p2: Point) {
   return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
 }
 
 // Function to calculate the center of a circle given two points
-function circleFromTwoPoints(p1, p2) {
+function circleFromTwoPoints(p1: Point, p2:Point) {
   const center = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
   const radius = distance(p1, p2) / 2;
   return { center, radius };
 }
 
 // Function to calculate the center of a circle given three points
-function circleFromThreePoints(p1, p2, p3) {
+function circleFromThreePoints(p1:Point, p2:Point, p3:Point): Circle | null {
   const offset = Math.pow(p2.x, 2) + Math.pow(p2.y, 2);
   const bc = (Math.pow(p1.x, 2) + Math.pow(p1.y, 2) - offset) / 2.0;
   const cd = (offset - Math.pow(p3.x, 2) - Math.pow(p3.y, 2)) / 2.0;
@@ -31,12 +42,12 @@ function circleFromThreePoints(p1, p2, p3) {
 }
 
 // Helper function to check if a point is inside a circle
-function isPointInCircle(p, circle) {
+function isPointInCircle(p: Point, circle: Circle) {
   return distance(p, circle.center) <= circle.radius;
 }
 
 // Welzl's algorithm implementation to find the minimum enclosing circle
-function welzl(points, boundaryPoints = []) {
+export function minimumBoundingCircle(points: Point[], boundaryPoints: Point[] = []) : Circle | null {
   // Base case: if no points are left or boundary points form a circle
   if (points.length === 0 || boundaryPoints.length === 3) {
     switch (boundaryPoints.length) {
@@ -61,7 +72,11 @@ function welzl(points, boundaryPoints = []) {
 
   // Select a random point from the remaining points
   const [p, ...rest] = points;
-  const circle = welzl(rest, boundaryPoints);
+  const circle = minimumBoundingCircle(rest, boundaryPoints);
+
+  if (!circle) {
+    return null;
+  }
 
   // If the circle already includes the point, return the circle
   if (isPointInCircle(p, circle)) {
@@ -69,16 +84,16 @@ function welzl(points, boundaryPoints = []) {
   }
 
   // Otherwise, add the point to the boundary and recurse
-  return welzl(rest, [...boundaryPoints, p]);
+  return minimumBoundingCircle(rest, [...boundaryPoints, p]);
 }
 
-function getCountryCircle(country) {
-  const countryPoints = germany.filter(({ name }) => name === country);
-  return welzl(countryPoints);
-}
+// function getCountryCircle(country) {
+//   const countryPoints = germany.filter(({ name }) => name === country);
+//   return minimumBoundingCircle(countryPoints);
+// }
 
-const circle = welzl(germany.map(({ x, y }) => ({ x: y, y: x })));
-console.log(`Center: (${circle.center.x}, ${circle.center.y}), Radius: ${circle.radius * 54.6}`);
+// const circle = minimumBoundingCircle(germany.map(({ x, y }) => ({ x: y, y: x })));
+// console.log(`Center: (${circle.center.x}, ${circle.center.y}), Radius: ${circle.radius * 54.6}`);
 
-const rawCircle = welzl(rawGermany.map(({ x, y }) => ({ x: x*69, y: y*54.6 })));
-console.log(`Raw Center: (${rawCircle.center.x / 69}, ${rawCircle.center.y / 54.6}), Radius: ${rawCircle.radius}`);
+// const rawCircle = minimumBoundingCircle(rawGermany.map(({ x, y }) => ({ x: x*69, y: y*54.6 })));
+// console.log(`Raw Center: (${rawCircle.center.x / 69}, ${rawCircle.center.y / 54.6}), Radius: ${rawCircle.radius}`);

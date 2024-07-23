@@ -1,19 +1,21 @@
 import puppeteer from 'puppeteer';
-const countries = require("../countries.json");
+import countries from "../data/countries.json" with { type: "json"};
 
-const invalidCountries = ["Senkakus",
-"Koualou",
-"Demchok",
-"Sanafir & Tiran Is.",
-"Kalapani",
-"Siachen-Saltoro",
-"Gaza Strip",
-"Antarctica",
-"Aksai Chin",
-"Falkland Islands (UK)",
-"No Man's Land",
-"Spratly Is",
-  "Paracel Is"]
+const invalidCountries = [
+  "Senkakus",
+  "Koualou",
+  "Demchok",
+  "Sanafir & Tiran Is.",
+  "Kalapani",
+  "Siachen-Saltoro",
+  "Gaza Strip",
+  "Antarctica",
+  "Aksai Chin",
+  "Falkland Islands (UK)",
+  "No Man's Land",
+  "Spratly Is",
+  "Paracel Is"
+];
 const wronglyNamedCountriesMapping = {
   "Trinidad & Tobago": "Trinidad and Tobago",
   "St Vincent & the Grenadines": "St. Vin. and Gren.",
@@ -38,8 +40,8 @@ export default class GameSolver {
     globleCapitals: "https://globle-capitals.com/game/",
   };
 
-  async launchBrowser(game: GameType) {
-    this.browser = await puppeteer.launch({ headless: false });
+  async launchBrowser(game: GameType, headless = true) {
+    this.browser = await puppeteer.launch({ headless: headless });
     this.page = await this.browser.newPage();
     await this.page.goto(this.globleUrls[game], { waitUntil: 'networkidle2' });
   }
