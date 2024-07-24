@@ -27,13 +27,27 @@ function circleFromTwoPoints(p1: Point, p2:Point) {
 
 // Function to calculate the center of a circle given three points
 function circleFromThreePoints(p1:Point, p2:Point, p3:Point): Circle | null {
-  const offset = Math.pow(p2.x, 2) + Math.pow(p2.y, 2);
-  const bc = (Math.pow(p1.x, 2) + Math.pow(p1.y, 2) - offset) / 2.0;
-  const cd = (offset - Math.pow(p3.x, 2) - Math.pow(p3.y, 2)) / 2.0;
-  const det = (p1.x - p2.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p2.y);
+  let offset = Math.pow(p2.x, 2) + Math.pow(p2.y, 2);
+  let bc = (Math.pow(p1.x, 2) + Math.pow(p1.y, 2) - offset) / 2.0;
+  let cd = (offset - Math.pow(p3.x, 2) - Math.pow(p3.y, 2)) / 2.0;
+  let det = (p1.x - p2.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p2.y);
 
   // If the determinant is zero, the points are collinear and do not form a circle
+  let i = 0
+  while (Math.abs(det) < 1e-14) {
+    p1.x += 1e-10;
+    p2.y -= 1e-10;
+    offset = Math.pow(p2.x, 2) + Math.pow(p2.y, 2);
+    bc = (Math.pow(p1.x, 2) + Math.pow(p1.y, 2) - offset) / 2.0;
+    cd = (offset - Math.pow(p3.x, 2) - Math.pow(p3.y, 2)) / 2.0;
+    det = (p1.x - p2.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p2.y);
+    i++
+    if (i % 100 === 0) {
+      console.log('Points are collinear - trying to fix it (' + i + ')');
+    }
+  }
   if (Math.abs(det) < 1e-14) {
+    console.error('Points are collinear');
     return null;
   }
 
@@ -44,7 +58,7 @@ function circleFromThreePoints(p1:Point, p2:Point, p3:Point): Circle | null {
 }
 
 // Helper function to check if a point is inside a circle
-function isPointInCircle(p: Point, circle: Circle) {
+export function isPointInCircle(p: Point, circle: Circle) {
   return distance(p, circle.center) <= circle.radius;
 }
 

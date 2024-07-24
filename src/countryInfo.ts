@@ -1,11 +1,7 @@
 export default interface CountryInfo {
-   properties: {
-      shapeGroup: string, 
-      shapeType: "ADM0",
-      shapeName: string
+   metadata: {
+      name: string;
+      isoCode: string;
    },
-   geometry: {
-      type: "Polygon" | "MultiPolygon",
-      coordinates: number[][][] | number[][][][];
-   };
+   minimizedPoints: {lat: number, lng: number}[];
 }

@@ -1,7 +1,6 @@
 import puppeteer from 'puppeteer';
-import countries from "../data/countries.json" with { type: "json"};
 import CountryInfo from './countryInfo.js';
-import { GameType, SolvingStrategy } from './solving.js';
+import { GameType, Guess, SolvingStrategy } from './solving.js';
 import { Country } from './geo.js';
 
 const invalidCountries = [
@@ -41,14 +40,16 @@ export default class GameSolver {
     globleCapitals: "https://globle-capitals.com/game/",
   };
 
-  private guesses: { country: string, closestBorder: number; }[] = [];
+  private guesses: Guess[] = [];
   private countries: Country[];
+  private borders: CountryInfo[] = [];
 
   constructor(geoData: CountryInfo[]) {
-    this.countries = geoData.map(({ properties }) => ({ name: properties.shapeName, isoCode: properties.shapeGroup }));
+    this.borders = geoData;
+    this.countries = geoData.map(({ metadata }) => (metadata));
   }
 
-  async launchBrowser(game: GameType, headless = true) {
+  public async launchBrowser(game: GameType, headless = true) {
     this.browser = await puppeteer.launch({ headless: headless });
     this.page = await this.browser.newPage();
     await this.page.goto(this.globleUrls[game], { waitUntil: 'networkidle2' });
@@ -58,13 +59,13 @@ export default class GameSolver {
     await this.browser?.close();
   }
 
-  async solve(strategy: SolvingStrategy) {
+  public async solve(strategy: SolvingStrategy) {
     if (!this.browser || !this.page) {
       console.error('Browser or page not initialized');
       return;
     }
 
-    const solution = await this.playGame();
+    const solution = await this.playGame(strategy);
     console.log(`Solution found after ${this.guesses.length} guesses: ${solution}`);
   }
 
@@ -109,16 +110,8 @@ export default class GameSolver {
     }
   }
 
-  private logGuess(country: string, closestBorder: number) {
+  private logGuess(country: string, closestBorder: number | null) {
     this.guesses.push({ country, closestBorder });
-  }
-
-  private shuffleArray(array: any[]) {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
   }
 
   private async isSolutionFound() {
@@ -135,22 +128,28 @@ export default class GameSolver {
     }
   }
 
-  private async playGame() {
-    for (const country of this.shuffleArray(countries)) {
-      await this.guessCountry(country.name);
+  private async playGame(strategy: SolvingStrategy) {
+    const initialGuess = strategy.initialGuess(this.countries, c => c.name);
+    await this.guessCountry(initialGuess);
+    const closestBorder = await this.getClosestBorder();
+    this.logGuess(initialGuess, closestBorder);
+    const solution = await this.isSolutionFound();
+
+    if (solution) {
+      return initialGuess;
+    }
+
+    console.log(`Guess 1: ${initialGuess}`);
+
+    while (!solution) {
+      const nextGuess = strategy.nextGuess(this.guesses, this.borders);
+      await this.guessCountry(nextGuess);
       const closestBorder = await this.getClosestBorder();
-      if (closestBorder !== null) {
-        const minimumBorderDist = Math.min(...this.guesses.map(g => g.closestBorder));
-        if (closestBorder < minimumBorderDist) {
-          console.log("Warmer! Guessed: ", country, " with closest border: ", closestBorder);
-        }
-        this.logGuess(country, closestBorder);
-      } else {
-        console.log(`Failed to get closest border for ${country}`);
-      }
+      console.log(`Closest border: ${closestBorder}`);
+      this.logGuess(nextGuess, closestBorder);
       const solution = await this.isSolutionFound();
       if (solution) {
-        return country;
+        return nextGuess;
       }
     }
   }
