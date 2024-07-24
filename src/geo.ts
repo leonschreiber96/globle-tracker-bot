@@ -8,7 +8,7 @@ interface Point {
   y: number;
 }
 
-interface Circle {
+export interface Circle {
   center: Point;
   radius: number;
 }

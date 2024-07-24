@@ -79,8 +79,12 @@ export default class GameSolver {
     }
   }
 
-  private logGuess(country: string, closestBorder: number | null) {
-    this.guesses.push({ id: this.guesses.length, country, closestBorder });
+  private logGuess(country: string, closestBorder: number | null) {
+    if (this.guesses.some(g => g.closestBorder === closestBorder)) {
+      this.guesses.push({ id: this.guesses.length, country, closestBorder: null });
+    } else {
+      this.guesses.push({ id: this.guesses.length, country, closestBorder });
+    }
   }
 
   private async isSolutionFound() {
@@ -114,7 +118,6 @@ export default class GameSolver {
       const nextGuess = strategy.nextGuess(this.guesses, this.borders);
       await this.guessCountry(nextGuess);
       const closestBorder = await this.getClosestBorder();
-      console.log(`Closest border: ${closestBorder}`);
       this.logGuess(nextGuess, closestBorder);
       const solution = await this.isSolutionFound();
       if (solution) {
