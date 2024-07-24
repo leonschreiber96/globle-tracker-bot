@@ -2,17 +2,17 @@ import CountryInfo from "./countryInfo.js";
 import { Country, isPointInCircle } from "./geo.js";
 import { minimumBoundingCircle } from "./geo.js";
 
-export type Guess = { country: string, closestBorder: number | null; };
+export type Guess = { id: number, country: string, closestBorder: number | null; };
 export type GameType = 'globle' | 'globleCapitals';
 
 export abstract class SolvingStrategy {
-  abstract initialGuess<T extends Country | CountryInfo>(countries: T[], nameProperty: (c: T) => string): string;
+  abstract initialGuess<T extends CountryInfo>(countries: T[]): string;
   abstract nextGuess(previousGuesses: Guess[], countries: CountryInfo[]): string;
 }
 
 export class RandomSolvingStrategy extends SolvingStrategy {
-  initialGuess<T extends Country | CountryInfo>(countries: T[], nameProperty: (c: T) => string): string {
-    return nameProperty(countries[Math.floor(Math.random() * countries.length)]);
+  initialGuess<T extends CountryInfo>(countries: T[]): string {
+    return countries[Math.floor(Math.random() * countries.length)].metadata.name;
   }
 
   nextGuess(previousGuesses: Guess[], countries: CountryInfo[]): string {
@@ -32,8 +32,12 @@ export class CircleSolvingStrategy extends SolvingStrategy {
     return array;
   }
 
-  initialGuess<T extends Country | CountryInfo>(countries: T[], nameProperty: (c: T) => string): string {
-    return nameProperty(countries[Math.floor(Math.random() * countries.length)]);
+  initialGuess<T extends CountryInfo>(countries: T[]): string {
+    // select one of 5 smallest countries in europe randomly
+    const europe = countries.filter(c => c.metadata.region === "Europe");
+    const sorted = europe.sort((a, b) => a.minimizedPoints.length - b.minimizedPoints.length);
+    const smallestCountries = sorted.slice(0, 5);
+    return this.shuffleArray(smallestCountries)[Math.floor(Math.random() * 5)].metadata.name;
   }
 
   nextGuess(previousGuesses: Guess[], countries: CountryInfo[]): string {

@@ -14,6 +14,6 @@ if (!CONFIG.TELEGRAM_BOT_TOKEN || !CONFIG.SHEET_ID || !CONFIG.ADMIN_CHAT_ID) {
 // bot.start();
 const strategy = new CircleSolvingStrategy();
 const solver = new GameSolver(countryData as CountryInfo[]);
-await solver.launchBrowser("globle", false);
-await solver.solve(strategy);
-await solver.closeBrowser();
+// await solver.launchBrowser("globle", false);
+// await solver.solve(strategy);
+// await solver.closeBrowser();

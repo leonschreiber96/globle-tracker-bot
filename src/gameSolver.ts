@@ -3,50 +3,19 @@ import CountryInfo from './countryInfo.js';
 import { GameType, Guess, SolvingStrategy } from './solving.js';
 import { Country } from './geo.js';
 
-const invalidCountries = [
-  "Senkakus",
-  "Koualou",
-  "Demchok",
-  "Sanafir & Tiran Is.",
-  "Kalapani",
-  "Siachen-Saltoro",
-  "Gaza Strip",
-  "Antarctica",
-  "Aksai Chin",
-  "Falkland Islands (UK)",
-  "No Man's Land",
-  "Spratly Is",
-  "Paracel Is"
-];
-const wronglyNamedCountriesMapping = {
-  "Trinidad & Tobago": "Trinidad and Tobago",
-  "St Vincent & the Grenadines": "St. Vin. and Gren.",
-  "Micronesia, Fed States of": "Micronesia",
-  "St Kitts & Nevis": "St. Kitts and Nevis",
-  "Bahamas, The": "Bahamas",
-  "Bosnia & Herzegovina": "Bosnia and Herzegovina",
-  "Antigua & Barbuda": "Antigua and Barb.",
-  "Korea, South": "South Korea",
-  "Korea, North": "North Korea",
-  "Gambia, The": "Gambia",
-  "Sao Tome & Principe": "São Tomé and Príncipe",
-};
-
 export default class GameSolver {
   private browser?: puppeteer.Browser;
   private page?: puppeteer.Page;
   private globleUrls: Record<GameType, string> = {
-    globle: "https://globle-game.com/game",
+    globle: "https://globle-game.com/practice",
     globleCapitals: "https://globle-capitals.com/game/",
   };
 
   private guesses: Guess[] = [];
-  private countries: Country[];
   private borders: CountryInfo[] = [];
 
   constructor(geoData: CountryInfo[]) {
     this.borders = geoData;
-    this.countries = geoData.map(({ metadata }) => (metadata));
   }
 
   public async launchBrowser(game: GameType, headless = true) {
@@ -111,7 +80,7 @@ export default class GameSolver {
   }
 
   private logGuess(country: string, closestBorder: number | null) {
-    this.guesses.push({ country, closestBorder });
+    this.guesses.push({ id: this.guesses.length, country, closestBorder });
   }
 
   private async isSolutionFound() {
@@ -129,7 +98,7 @@ export default class GameSolver {
   }
 
   private async playGame(strategy: SolvingStrategy) {
-    const initialGuess = strategy.initialGuess(this.countries, c => c.name);
+    const initialGuess = strategy.initialGuess(this.borders);
     await this.guessCountry(initialGuess);
     const closestBorder = await this.getClosestBorder();
     this.logGuess(initialGuess, closestBorder);

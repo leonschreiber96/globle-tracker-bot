@@ -1,7 +1,13 @@
+interface countryMetadata {
+   name: string;
+   isoCode: string;
+   region: string;
+   subRegion: string;
+   intermediateRegion: string;
+   size: number;
+}
+
 export default interface CountryInfo {
-   metadata: {
-      name: string;
-      isoCode: string;
-   },
+   metadata: countryMetadata;
    minimizedPoints: {lat: number, lng: number}[];
 }
