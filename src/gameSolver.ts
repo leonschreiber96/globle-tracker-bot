@@ -1,7 +1,6 @@
 import puppeteer from 'puppeteer';
 import CountryInfo from './countryInfo.js';
 import { GameType, Guess, SolvingStrategy } from './solving.js';
-import { Country } from './geo.js';
 
 export default class GameSolver {
   private browser?: puppeteer.Browser;
@@ -112,12 +111,19 @@ export default class GameSolver {
       return initialGuess;
     }
 
-    console.log(`Guess 1: ${initialGuess}`);
+    console.log(`Guess 1: ${initialGuess}` + (closestBorder ? ` (${closestBorder})` : ''));
+    
 
+    const counter = 0;
     while (!solution) {
+      if (counter > 100) {
+        console.error('Too many guesses');
+        return null;
+      }
       const nextGuess = strategy.nextGuess(this.guesses, this.borders);
       await this.guessCountry(nextGuess);
       const closestBorder = await this.getClosestBorder();
+      console.log(`Guess ${this.guesses.length + 1}: ${nextGuess} (${closestBorder})`);
       this.logGuess(nextGuess, closestBorder);
       const solution = await this.isSolutionFound();
       if (solution) {

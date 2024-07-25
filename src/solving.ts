@@ -1,5 +1,5 @@
 import CountryInfo from "./countryInfo.js";
-import { Circle, Country, isPointInCircle } from "./geo.js";
+import { Circle, isPointInCircle } from "./geo.js";
 import { minimumBoundingCircle } from "./geo.js";
 
 export type Guess = { id: number, country: string, closestBorder: number | null; };
@@ -34,7 +34,7 @@ export class CircleSolvingStrategy extends SolvingStrategy {
   }
 
   private borderInsideCircle(circle: Circle, country: CountryInfo): boolean {
-    return country.minimizedPoints.some(b => isPointInCircle({ x: b.lat * 110.574, y: b.lng * 111.32 * Math.cos(b.lat * (Math.PI / 180)) }, circle));
+    return country.minimizedPoints.some(b => isPointInCircle({ x: b.lat, y: b.lng }, circle));
   }
 
   initialGuess<T extends CountryInfo>(countries: T[]): string {
@@ -50,8 +50,6 @@ export class CircleSolvingStrategy extends SolvingStrategy {
     const bestGuess = guessesWithBorders.slice(-1)[0]
     const openCandidates = countries.filter(c => !previousGuesses.some(g => g.country === c.metadata.name) && !this.discardedCountries.includes(c.metadata.name));
 
-    console.log(`Guesses with borders: ${JSON.stringify(guessesWithBorders)}`);
-
     // If no guess with closest border is found, return an initial guess
     if (!bestGuess) {
       return this.initialGuess(countries);
@@ -60,7 +58,7 @@ export class CircleSolvingStrategy extends SolvingStrategy {
     // Calculate the circle for each guess that has a border associated with it
     const circles = guessesWithBorders.map(g => {
       const country = countries.find(c => g.country === c.metadata.name);
-      const circle = minimumBoundingCircle(country!.minimizedPoints.map(p => ({ x: p.lat * 110.574, y: p.lng * 111.32 * Math.cos(p.lat * (Math.PI / 180)) })));
+      const circle = minimumBoundingCircle(country!.minimizedPoints.map(p => ({ x: p.lat, y: p.lng })));
       if (!circle) {
         return null;
       }
@@ -68,17 +66,40 @@ export class CircleSolvingStrategy extends SolvingStrategy {
       return circle;
     }).filter(c => c !== null) as Circle[];
 
-    console.log(`Circles: ${JSON.stringify(circles)}`);
+    let chosenCandidate = undefined;
+    let counter = 1
 
-    for (const candidate of this.shuffleArray(openCandidates)) {
-      const allCirclesContainBorder = circles.every(c => this.borderInsideCircle(c, candidate));
-      if (!allCirclesContainBorder) {
-        this.discardedCountries.push(candidate.metadata.name);
-        continue;
-      } else {
-        return candidate.metadata.name;
-      }
+    console.log()
+    console.log('-------------------');
+    console.log('openCandidates', openCandidates.length);
+    console.log('-------------------');
+    console.log('Circles (0):')
+    for (const circle of circles) {
+      console.log(`    (${circle.center.x}, ${circle.center.y}), ${circle.radius}`);
     }
+
+    while (chosenCandidate === undefined && counter < 10) {
+      for (const candidate of this.shuffleArray(openCandidates)) {
+        
+        const allCirclesContainBorder = circles.every(c => this.borderInsideCircle(c, candidate));
+        if (!allCirclesContainBorder) {
+          this.discardedCountries.push(candidate.metadata.name);
+        } else {
+          chosenCandidate = candidate;
+        }
+      }
+      circles.forEach(c => {
+        c.radius += counter*100;
+      });
+      console.log(`Circles (${counter}):`)
+      for (const circle of circles) {
+        console.log(`    (${circle.center.x}, ${circle.center.y}), ${circle.radius}`);
+      }
+      counter++;
+    }
+
+    if (chosenCandidate)
+      return chosenCandidate.metadata.name;
 
     throw new Error('No country found inside the circle');
   }
