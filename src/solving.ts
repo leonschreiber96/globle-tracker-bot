@@ -1,18 +1,18 @@
 import CountryInfo from "./countryInfo.js";
-import { Country, isPointInCircle } from "./geo.js";
+import { Circle, isPointInCircle } from "./geo.js";
 import { minimumBoundingCircle } from "./geo.js";
 
-export type Guess = { country: string, closestBorder: number | null; };
+export type Guess = { id: number, country: string, closestBorder: number | null; };
 export type GameType = 'globle' | 'globleCapitals';
 
 export abstract class SolvingStrategy {
-  abstract initialGuess<T extends Country | CountryInfo>(countries: T[], nameProperty: (c: T) => string): string;
+  abstract initialGuess<T extends CountryInfo>(countries: T[]): string;
   abstract nextGuess(previousGuesses: Guess[], countries: CountryInfo[]): string;
 }
 
 export class RandomSolvingStrategy extends SolvingStrategy {
-  initialGuess<T extends Country | CountryInfo>(countries: T[], nameProperty: (c: T) => string): string {
-    return nameProperty(countries[Math.floor(Math.random() * countries.length)]);
+  initialGuess<T extends CountryInfo>(countries: T[]): string {
+    return countries[Math.floor(Math.random() * countries.length)].metadata.name;
   }
 
   nextGuess(previousGuesses: Guess[], countries: CountryInfo[]): string {
@@ -23,6 +23,7 @@ export class RandomSolvingStrategy extends SolvingStrategy {
 }
 
 export class CircleSolvingStrategy extends SolvingStrategy {
+  private discardedCountries: string[] = [];
 
   private shuffleArray<T>(array: T[]) {
     for (let i = array.length - 1; i > 0; i--) {
@@ -32,58 +33,74 @@ export class CircleSolvingStrategy extends SolvingStrategy {
     return array;
   }
 
-  initialGuess<T extends Country | CountryInfo>(countries: T[], nameProperty: (c: T) => string): string {
-    return nameProperty(countries[Math.floor(Math.random() * countries.length)]);
+  private borderInsideCircle(circle: Circle, country: CountryInfo): boolean {
+    circle.radius += 100;
+    return country.minimizedPoints.some(b => isPointInCircle({ x: b.lat, y: b.lng }, circle));
+  }
+
+  initialGuess<T extends CountryInfo>(countries: T[]): string {
+    // select one of 5 smallest countries in europe randomly
+    const europe = countries.filter(c => c.metadata.region === "Europe");
+    const sorted = europe.sort((a, b) => a.minimizedPoints.length - b.minimizedPoints.length);
+    const smallestCountries = sorted.slice(0, 5);
+    return this.shuffleArray(smallestCountries)[Math.floor(Math.random() * 5)].metadata.name;
   }
 
   nextGuess(previousGuesses: Guess[], countries: CountryInfo[]): string {
-    let bestGuess = this.getBestGuess(previousGuesses);
-    let country = this.shuffleArray(countries).find(c => bestGuess.country === c.metadata.name);
-    let circle = minimumBoundingCircle(country!.minimizedPoints.map(p => ({ x: p.lat * 110.574, y: p.lng * 111.32 * Math.cos(p.lat * (Math.PI / 180)) })));
-    
-    const failedGuesses: Guess[] = [];
-    while (!circle) {
-      failedGuesses.push(bestGuess);
-      bestGuess = this.getBestGuess(previousGuesses.filter(g => !failedGuesses.includes(g)));
-      country = this.shuffleArray(countries).find(c => bestGuess.country === c.metadata.name);
-      circle = minimumBoundingCircle(country!.minimizedPoints.map(p => ({ x: p.lat * 110.574, y: p.lng * 111.32 * Math.cos(p.lat * (Math.PI / 180)) })));
+    const guessesWithBorders = previousGuesses.filter(g => g.closestBorder !== null).sort((a, b) => a.id! - b.id!);
+    const bestGuess = guessesWithBorders.slice(-1)[0]
+    const openCandidates = countries.filter(c => !previousGuesses.some(g => g.country === c.metadata.name) && !this.discardedCountries.includes(c.metadata.name));
 
-      if (country?.metadata.name === "Ukraine") {
-        console.log(`Circle Ukraine: ${circle}`);
-      }
+    // If no guess with closest border is found, return an initial guess
+    if (!bestGuess) {
+      return this.initialGuess(countries);
     }
 
-    console.log(`${country?.metadata.name}: (${circle!.center.x}, ${circle!.center.y}) → r = ${circle!.radius}`);
+    // Calculate the circle for each guess that has a border associated with it
+    const circles = guessesWithBorders.map(g => {
+      const country = countries.find(c => g.country === c.metadata.name);
+      const circle = minimumBoundingCircle(country!.minimizedPoints.map(p => ({ x: p.lat, y: p.lng })));
+      if (!circle) {
+        return null;
+      }
+      circle.radius += g.closestBorder!;
+      return circle;
+    }).filter(c => c !== null) as Circle[];
 
-    // Increase the circle radius to include the best guess yet
-    circle.radius += bestGuess.closestBorder!;
+    let chosenCandidate = undefined;
+    let counter = 1
 
-    // let x = false;
-    const notGuessedCountries = countries.filter(c => !previousGuesses.some(g => g.country === c.metadata.name));
-    for (const c of notGuessedCountries) {
-      const anyPointInsideCircle = c.minimizedPoints.some(p => {
-        const point = { x: p.lat * 110.574, y: p.lng*111.32*Math.cos(p.lat*(Math.PI/180)) };
-        // if (!x) {
-        //   console.log(`${c.metadata.name}: (${point.x}, ${point.y}) for ${circle.center.x}, ${circle.center.y} and ${circle.radius}`);
-        // }
-        // x = true;
-        return isPointInCircle(point, circle!);
+    console.log()
+    console.log('-------------------');
+    console.log('openCandidates', openCandidates.length);
+    console.log('-------------------');
+    console.log('Circles (0):')
+    for (const circle of circles) {
+      console.log(`    (${circle.center.x}, ${circle.center.y}), ${circle.radius}`);
+    }
+
+    while (chosenCandidate === undefined && counter < 10) {
+      for (const candidate of this.shuffleArray(openCandidates)) {
+        const allCirclesContainBorder = circles.every(c => this.borderInsideCircle(c, candidate));
+        if (!allCirclesContainBorder) {
+          this.discardedCountries.push(candidate.metadata.name);
+        } else {
+          chosenCandidate = candidate;
+        }
+      }
+      circles.forEach(c => {
+        c.radius += counter*100;
       });
-      if (anyPointInsideCircle) {
-        return c.metadata.name;
+      console.log(`Circles (${counter}):`)
+      for (const circle of circles) {
+        console.log(`    (${circle.center.x}, ${circle.center.y}), ${circle.radius}`);
       }
+      counter++;
     }
+
+    if (chosenCandidate)
+      return chosenCandidate.metadata.name;
 
     throw new Error('No country found inside the circle');
-  }
-
-  private getBestGuess(guesses: Guess[]) {
-    // get guesses where closestBorder is not null
-    let closestBorderGuesses = guesses.filter(g => g.closestBorder !== null);
-    // get where it is minimal (can be multiple)
-    let min = Math.min(...closestBorderGuesses.map(g => g.closestBorder!));
-    let bestGuesses = closestBorderGuesses.filter(g => g.closestBorder === min);
-    // return the first one (that is the one that actually achieved the minimal closestBorder)
-    return bestGuesses[0];
   }
 }

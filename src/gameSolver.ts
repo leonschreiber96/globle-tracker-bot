@@ -1,36 +1,6 @@
 import puppeteer from 'puppeteer';
 import CountryInfo from './countryInfo.js';
 import { GameType, Guess, SolvingStrategy } from './solving.js';
-import { Country } from './geo.js';
-
-const invalidCountries = [
-  "Senkakus",
-  "Koualou",
-  "Demchok",
-  "Sanafir & Tiran Is.",
-  "Kalapani",
-  "Siachen-Saltoro",
-  "Gaza Strip",
-  "Antarctica",
-  "Aksai Chin",
-  "Falkland Islands (UK)",
-  "No Man's Land",
-  "Spratly Is",
-  "Paracel Is"
-];
-const wronglyNamedCountriesMapping = {
-  "Trinidad & Tobago": "Trinidad and Tobago",
-  "St Vincent & the Grenadines": "St. Vin. and Gren.",
-  "Micronesia, Fed States of": "Micronesia",
-  "St Kitts & Nevis": "St. Kitts and Nevis",
-  "Bahamas, The": "Bahamas",
-  "Bosnia & Herzegovina": "Bosnia and Herzegovina",
-  "Antigua & Barbuda": "Antigua and Barb.",
-  "Korea, South": "South Korea",
-  "Korea, North": "North Korea",
-  "Gambia, The": "Gambia",
-  "Sao Tome & Principe": "São Tomé and Príncipe",
-};
 
 export default class GameSolver {
   private browser?: puppeteer.Browser;
@@ -41,17 +11,16 @@ export default class GameSolver {
   };
 
   private guesses: Guess[] = [];
-  private countries: Country[];
   private borders: CountryInfo[] = [];
 
   constructor(geoData: CountryInfo[]) {
     this.borders = geoData;
-    this.countries = geoData.map(({ metadata }) => (metadata));
   }
 
   public async launchBrowser(game: GameType, headless = true) {
-    this.browser = await puppeteer.launch({ headless: headless });
+    this.browser = await puppeteer.launch({ headless: headless, timeout: 31_000 });
     this.page = await this.browser.newPage();
+    await this.page.setDefaultNavigationTimeout(60000);
     await this.page.goto(this.globleUrls[game], { waitUntil: 'networkidle2' });
   }
 
@@ -62,11 +31,11 @@ export default class GameSolver {
   public async solve(strategy: SolvingStrategy) {
     if (!this.browser || !this.page) {
       console.error('Browser or page not initialized');
-      return;
+      throw new Error('Browser or page not initialized');
     }
 
     const solution = await this.playGame(strategy);
-    console.log(`Solution found after ${this.guesses.length} guesses: ${solution}`);
+    return { solution: solution, guesses: this.guesses };
   }
 
   private async guessCountry(country: string) {
@@ -110,8 +79,12 @@ export default class GameSolver {
     }
   }
 
-  private logGuess(country: string, closestBorder: number | null) {
-    this.guesses.push({ country, closestBorder });
+  private logGuess(country: string, closestBorder: number | null) {
+    if (this.guesses.some(g => g.closestBorder === closestBorder)) {
+      this.guesses.push({ id: this.guesses.length, country, closestBorder: null });
+    } else {
+      this.guesses.push({ id: this.guesses.length, country, closestBorder });
+    }
   }
 
   private async isSolutionFound() {
@@ -129,7 +102,7 @@ export default class GameSolver {
   }
 
   private async playGame(strategy: SolvingStrategy) {
-    const initialGuess = strategy.initialGuess(this.countries, c => c.name);
+    const initialGuess = strategy.initialGuess(this.borders);
     await this.guessCountry(initialGuess);
     const closestBorder = await this.getClosestBorder();
     this.logGuess(initialGuess, closestBorder);
@@ -139,18 +112,26 @@ export default class GameSolver {
       return initialGuess;
     }
 
-    console.log(`Guess 1: ${initialGuess}`);
+    console.log(`Guess 1: ${initialGuess}` + (closestBorder ? ` (${closestBorder})` : ''));
+    
 
+    const counter = 0;
     while (!solution) {
+      if (counter > 100) {
+        console.error('Too many guesses');
+        throw new Error('Too many guesses');
+      }
       const nextGuess = strategy.nextGuess(this.guesses, this.borders);
       await this.guessCountry(nextGuess);
       const closestBorder = await this.getClosestBorder();
-      console.log(`Closest border: ${closestBorder}`);
+      console.log(`Guess ${this.guesses.length + 1}: ${nextGuess} (${closestBorder})`);
       this.logGuess(nextGuess, closestBorder);
       const solution = await this.isSolutionFound();
       if (solution) {
         return nextGuess;
       }
     }
+
+    throw new Error('Solution not found');
   }
 }

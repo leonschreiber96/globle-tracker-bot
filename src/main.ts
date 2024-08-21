@@ -10,10 +10,35 @@ if (!CONFIG.TELEGRAM_BOT_TOKEN || !CONFIG.SHEET_ID || !CONFIG.ADMIN_CHAT_ID) {
    process.exit(1);
 }
 
-// const bot = new GlobleBot(CONFIG.TELEGRAM_BOT_TOKEN, CONFIG.ADMIN_CHAT_ID);
-// bot.start();
-const strategy = new CircleSolvingStrategy();
-const solver = new GameSolver(countryData as CountryInfo[]);
-await solver.launchBrowser("globle", false);
-await solver.solve(strategy);
-await solver.closeBrowser();
+const bot = new GlobleBot(CONFIG.TELEGRAM_BOT_TOKEN, CONFIG.ADMIN_CHAT_ID);
+bot.start();
+
+async function findSolution() {
+   try {
+      const solver = new GameSolver(countryData as CountryInfo[]);
+      const strategy = new CircleSolvingStrategy();
+      await solver.launchBrowser("globle", false);
+      const solution = await solver.solve(strategy);
+      await solver.closeBrowser();
+      console.log(`Solution found after ${solution.guesses.length} guesses: ${solution.solution}`);
+      return solution;
+   } catch (error) {
+      console.error("Failed to find solution", error);
+      return null;
+   }
+}
+
+// findSolution();
+
+// while (true) {
+//    while (!findSolution()) { 
+
+//    }
+
+// // Wait for a keypress to continue
+//    console.log('Press any key to continue or "q" to quit');
+//    const key = await new Promise(resolve => process.stdin.once('data', data => resolve(data.toString().trim())));
+//    if (key === "q") {
+//       break;
+//    }
+// }
