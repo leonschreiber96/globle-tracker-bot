@@ -34,6 +34,7 @@ export class CircleSolvingStrategy extends SolvingStrategy {
   }
 
   private borderInsideCircle(circle: Circle, country: CountryInfo): boolean {
+    circle.radius += 100;
     return country.minimizedPoints.some(b => isPointInCircle({ x: b.lat, y: b.lng }, circle));
   }
 
@@ -80,7 +81,6 @@ export class CircleSolvingStrategy extends SolvingStrategy {
 
     while (chosenCandidate === undefined && counter < 10) {
       for (const candidate of this.shuffleArray(openCandidates)) {
-        
         const allCirclesContainBorder = circles.every(c => this.borderInsideCircle(c, candidate));
         if (!allCirclesContainBorder) {
           this.discardedCountries.push(candidate.metadata.name);

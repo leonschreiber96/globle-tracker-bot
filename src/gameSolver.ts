@@ -6,7 +6,7 @@ export default class GameSolver {
   private browser?: puppeteer.Browser;
   private page?: puppeteer.Page;
   private globleUrls: Record<GameType, string> = {
-    globle: "https://globle-game.com/practice",
+    globle: "https://globle-game.com/game",
     globleCapitals: "https://globle-capitals.com/game/",
   };
 
@@ -18,8 +18,9 @@ export default class GameSolver {
   }
 
   public async launchBrowser(game: GameType, headless = true) {
-    this.browser = await puppeteer.launch({ headless: headless });
+    this.browser = await puppeteer.launch({ headless: headless, timeout: 31_000 });
     this.page = await this.browser.newPage();
+    await this.page.setDefaultNavigationTimeout(60000);
     await this.page.goto(this.globleUrls[game], { waitUntil: 'networkidle2' });
   }
 
@@ -30,11 +31,11 @@ export default class GameSolver {
   public async solve(strategy: SolvingStrategy) {
     if (!this.browser || !this.page) {
       console.error('Browser or page not initialized');
-      return;
+      throw new Error('Browser or page not initialized');
     }
 
     const solution = await this.playGame(strategy);
-    console.log(`Solution found after ${this.guesses.length} guesses: ${solution}`);
+    return { solution: solution, guesses: this.guesses };
   }
 
   private async guessCountry(country: string) {
@@ -118,7 +119,7 @@ export default class GameSolver {
     while (!solution) {
       if (counter > 100) {
         console.error('Too many guesses');
-        return null;
+        throw new Error('Too many guesses');
       }
       const nextGuess = strategy.nextGuess(this.guesses, this.borders);
       await this.guessCountry(nextGuess);
@@ -130,5 +131,7 @@ export default class GameSolver {
         return nextGuess;
       }
     }
+
+    throw new Error('Solution not found');
   }
 }

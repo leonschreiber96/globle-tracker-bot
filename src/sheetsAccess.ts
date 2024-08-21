@@ -6,6 +6,7 @@ const sheetId = process.env.SHEET_ID;
 
 const authToken = await authorize();
 
+
 export async function saveGame(newGame: GlobleGame) {
    const sheets = google.sheets({version: 'v4', auth: authToken});
    // Save data to Google Sheets
