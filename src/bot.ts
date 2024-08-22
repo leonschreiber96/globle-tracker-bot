@@ -1,12 +1,12 @@
 import TelegramBot from 'node-telegram-bot-api';
 import GlobleGame from './globleGame.js';
-import { saveGame } from './sheetsAccess.js';
+// import { saveGame } from './sheetsAccess.js';
+import supabase from "./supabaseClient.js";
 
 export default class GlobleBot {
   private bot: TelegramBot;
   private adminChatId: string;
   private msgRegex = /🌎 (\w{3} \d+, \d{4}) 🌍\n🔥 \d+ \| Avg. Guesses: [\d\.]+\n([⬛🟦🟪🟩🟨🟥🟧⬜🟫\n]+) = (\d+)\n\nh?t?t?p?s?:?\/?\/?(globle.*).com\n#globle.*/;
-  private saveLock = false
   
   constructor(token: string, adminChatId: string) {
     this.bot = new TelegramBot(token, { polling: true });
@@ -22,7 +22,7 @@ export default class GlobleBot {
         return;
       }
 
-      this.saveGame(game);
+      await supabase.from("games").insert([game]);
     });
 
     console.log("Bot started");
@@ -36,9 +36,9 @@ export default class GlobleBot {
     }
     
     const groups = matchesRegex.slice(1);
-    const date = groups[0]!;
+    // const date = groups[0]!;
     const guesses = groups[1]!;
-    const guessCount = +groups[2]!;
+    // const guessCount = +groups[2]!;
     const game = groups[3]!; 
     const solvedTime = +message.date;
 
@@ -55,16 +55,6 @@ export default class GlobleBot {
       } 
     }
 
-    return { name, date, game, guesses, guessCount, solvedTime };
-  }
-
-  private async saveGame(newGame: GlobleGame) {
-    while (this.saveLock) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    this.saveLock = true;
-    saveGame(newGame).then(() => {
-      this.saveLock = false;
-    });
-  }
+    return { player: name, timestamp: solvedTime ? new Date(solvedTime * 1000).toISOString() : new Date().toISOString(), guesses, game_type: game };
+  };
 }
