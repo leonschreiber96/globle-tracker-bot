@@ -23,7 +23,6 @@ export default class GlobleBot {
       }
 
       game.guesses = game.guesses.replace(/\n/g, "");
-
       await supabase.from("games").insert([game]);
     });
 
@@ -44,6 +43,15 @@ export default class GlobleBot {
     const game = groups[3]!; 
     const solvedTime = +message.date;
 
+    let timestamp = undefined;
+
+    if (solvedTime) {
+      timestamp = new Date(solvedTime * 1000 - new Date(solvedTime*1000).getTimezoneOffset() * 60000).toISOString();
+    } else {
+      let t = new Date();
+      timestamp = new Date(t.getTime() - t.getTimezoneOffset() * 60000).toISOString();
+    }
+
     let name = ""
     if (message.forward_from) {
       name = (message.forward_from.first_name || "") + " " + (message.forward_from.last_name || "");
@@ -57,6 +65,6 @@ export default class GlobleBot {
       } 
     }
 
-    return { player: name, timestamp: solvedTime ? new Date(solvedTime * 1000).toISOString() : new Date().toISOString(), guesses, game_type: game };
+    return { player: name, timestamp, guesses, game_type: game };
   };
 }
