@@ -22,6 +22,8 @@ export default class GlobleBot {
         return;
       }
 
+      game.guesses = game.guesses.replace(/\n/g, "");
+
       await supabase.from("games").insert([game]);
     });
 
